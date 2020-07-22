@@ -2,7 +2,7 @@ import json
 import dateutil.parser
 from datetime import datetime
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -12,138 +12,6 @@ from flask_wtf import Form
 from forms import *
 from models import *
 from config import db, app
-
-#----------------------------------------------------------------------------#
-# Initial Data.
-#----------------------------------------------------------------------------#
-db.drop_all()
-db.create_all()
-
-artist1 = Artist(
-    name="Guns N Petals",
-    genres="Rock n Roll",
-    city="San Francisco",
-    state="CA",
-    phone="326-123-5000",
-    website="https://www.gunsnpetalsband.com",
-    facebook_link="https://www.facebook.com/GunsNPetals",
-    seeking_venue=True,
-    seeking_description="Looking for shows to perform at in the San Francisco Bay Area!",
-    image_link="https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-)
-
-artist2 = Artist(
-    name="Matt Quevedo",
-    genres="Jazz",
-    city="New York",
-    state="NY",
-    phone="300-400-5000",
-    facebook_link="https://www.facebook.com/mattquevedo923251523",
-    seeking_venue=False,
-    image_link="https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-)
-
-artist3 = Artist(
-    name="The Wild Sax Band",
-    genres="Jazz,Classical",
-    city="San Francisco",
-    state="CA",
-    phone="432-325-5432",
-    seeking_venue=False,
-    image_link="https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-)
-
-venue1 = Venue(
-    name="The Musical Hop",
-    genres="Jazz,Reggae,Swing,Classical,Folk",
-    address="1015 Folsom Street",
-    city="San Francisco",
-    state="CA",
-    phone="123-123-1234",
-    website="https://www.themusicalhop.com",
-    facebook_link="https://www.facebook.com/TheMusicalHop",
-    seeking_talent=True,
-    seeking_description="We are on the lookout for a local artist to play every two weeks. Please call us.",
-    image_link="https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-)
-
-venue2 = Venue(
-    name="The Dueling Pianos Bar",
-    genres="Classical,R&B,Hip-Hop",
-    address="335 Delancey Street",
-    city="New York",
-    state="NY",
-    phone="914-003-1132",
-    website="https://www.theduelingpianos.com",
-    facebook_link="https://www.facebook.com/theduelingpianos",
-    seeking_talent=False,
-    image_link="https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80",
-)
-
-venue3 = Venue(
-    name="Park Square Live Music & Coffee",
-    genres="Rock n Roll,Jazz,Classical,Folk",
-    address="34 Whiskey Moore Ave",
-    city="San Francisco",
-    state="CA",
-    phone="415-000-1234",
-    website="https://www.parksquarelivemusicandcoffee.com",
-    facebook_link="https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    seeking_talent=False,
-    image_link="https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-)
-
-show1 = Show(
-    venue_id=1,
-    artist_id=1,
-    start_time="2019-05-21T21:30:00.000Z"
-)
-
-show2 = Show(
-    venue_id=3,
-    artist_id=2,
-    start_time="2019-06-15T23:00:00.000Z"
-)
-
-show3 = Show(
-    venue_id=3,
-    artist_id=3,
-    start_time="2035-04-01T20:00:00.000Z"
-)
-
-show4 = Show(
-    venue_id=3,
-    artist_id=3,
-    start_time="2035-05-01T20:00:00.000Z"
-)
-
-show5 = Show(
-    venue_id=3,
-    artist_id=3,
-    start_time="2035-06-01T20:00:00.000Z"
-)
-
-db.session.add_all([artist1, artist2, artist3, venue1, venue2,
-                    venue3, show1, show2, show3, show4, show5])
-db.session.commit()
-
-#----------------------------------------------------------------------------#
-# Filters.
-#----------------------------------------------------------------------------#
-
-def format_datetime(value, format='medium'):
-    if type(value) is str:
-        date = dateutil.parser.parse(value)
-    else:
-        date = value
-
-    if format == 'full':
-        format = "EEEE MMMM, d, y 'at' h:mma"
-    elif format == 'medium':
-        format = "EE MM, dd, y h:mma"
-    return babel.dates.format_datetime(date, format)
-
-app.jinja_env.filters['datetime'] = format_datetime
 
 #----------------------------------------------------------------------------#
 # Controllers.
@@ -179,8 +47,8 @@ def venues():
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
 
-    venues = Venue.query.with_entities(Venue.id, Venue.name).filter(Venue.name.ilike(
-        f"%{request.form.get('search_term', '')}%")).all()
+    search_term = '%{}%'.format(request.form.get('search_term', ''))
+    venues = Venue.query.filter(Venue.name.ilike(search_term)).all()
 
     response = {'count': len(venues), 'data': venues}
 
@@ -190,33 +58,23 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
 
-    venue = Venue.query.get(venue_id)
-    upcoming_shows = Show.query.join(Show.artist).with_entities(Artist.id.label("artist_id"), Artist.name.label("artist_name"), Artist.image_link.label("artist_image_link"), Show.start_time).filter(
-        Show.venue_id == venue_id, Show.start_time > datetime.today()).all()
-    past_shows = Show.query.join(Show.artist).with_entities(Artist.id.label("artist_id"), Artist.name.label("artist_name"), Artist.image_link.label("artist_image_link"), Show.start_time).filter(
-        Show.venue_id == venue_id, Show.start_time <= datetime.today()).all()
+  venue = Venue.query.get(venue_id)
 
-    data = {
-        "id": venue.id,
-        "name": venue.name,
-        "genres": venue.genres.split(","),
-        "address": venue.address,
-        "city": venue.city,
-        "state": venue.state,
-        "phone": venue.phone,
-        "website": venue.website,
-        "facebook_link": venue.facebook_link,
-        "image_link": venue.image_link,
-        "seeking_talent": venue.seeking_talent,
-        "seeking_description": venue.seeking_description,
+  past_shows = list(filter(lambda x: x.start_time < datetime.today(), venue.shows))
+  upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), venue.shows))
 
-        "upcoming_shows": upcoming_shows,
-        "past_shows": past_shows,
-        "upcoming_shows_count": len(upcoming_shows),
-        "past_shows_count": len(past_shows)
-    }
+  past_shows = list(map(lambda x: x.show_artist(), past_shows))
+  upcoming_shows = list(map(lambda x: x.show_artist(), upcoming_shows))
 
-    return render_template('pages/show_venue.html', venue=data)
+  data = venue.venue_to_dictionary()
+
+  data['past_shows'] = past_shows
+  data['past_shows_count'] = len(past_shows)
+
+  data['upcoming_shows'] = upcoming_shows
+  data['upcoming_shows_count'] = len(upcoming_shows)
+
+  return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -488,6 +346,24 @@ def not_found_error(error):
 @app.errorhandler(500)
 def server_error(error):
     return render_template('errors/500.html'), 500
+
+#----------------------------------------------------------------------------#
+# Filters.
+#----------------------------------------------------------------------------#
+
+def format_datetime(value, format='medium'):
+    if type(value) is str:
+        date = dateutil.parser.parse(value)
+    else:
+        date = value
+
+    if format == 'full':
+        format = "EEEE MMMM, d, y 'at' h:mma"
+    elif format == 'medium':
+        format = "EE MM, dd, y h:mma"
+    return babel.dates.format_datetime(date, format)
+
+app.jinja_env.filters['datetime'] = format_datetime
 
 
 if not app.debug:
