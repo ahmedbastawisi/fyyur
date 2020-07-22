@@ -1,4 +1,5 @@
 import json
+import sys
 import dateutil.parser
 from datetime import datetime
 import babel
@@ -16,7 +17,6 @@ from config import db, app
 #----------------------------------------------------------------------------#
 # Controllers.
 #----------------------------------------------------------------------------#
-
 
 @app.route('/')
 def index():
@@ -58,23 +58,33 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
 
-  venue = Venue.query.get(venue_id)
+    venue = Venue.query.get(venue_id)
+    upcoming_shows = Show.query.join(Show.artist).with_entities(Artist.id.label("artist_id"), Artist.name.label("artist_name"), Artist.image_link.label("artist_image_link"), Show.start_time).filter(
+        Show.venue_id == venue_id, Show.start_time > datetime.today()).all()
+    past_shows = Show.query.join(Show.artist).with_entities(Artist.id.label("artist_id"), Artist.name.label("artist_name"), Artist.image_link.label("artist_image_link"), Show.start_time).filter(
+        Show.venue_id == venue_id, Show.start_time <= datetime.today()).all()
 
-  past_shows = list(filter(lambda x: x.start_time < datetime.today(), venue.shows))
-  upcoming_shows = list(filter(lambda x: x.start_time >= datetime.today(), venue.shows))
+    data = {
+        "id": venue.id,
+        "name": venue.name,
+        "genres": venue.genres.split(","),
+        "address": venue.address,
+        "city": venue.city,
+        "state": venue.state,
+        "phone": venue.phone,
+        "website": venue.website,
+        "facebook_link": venue.facebook_link,
+        "image_link": venue.image_link,
+        "seeking_talent": venue.seeking_talent,
+        "seeking_description": venue.seeking_description,
 
-  past_shows = list(map(lambda x: x.show_artist(), past_shows))
-  upcoming_shows = list(map(lambda x: x.show_artist(), upcoming_shows))
+        "upcoming_shows": upcoming_shows,
+        "past_shows": past_shows,
+        "upcoming_shows_count": len(upcoming_shows),
+        "past_shows_count": len(past_shows)
+    }
 
-  data = venue.venue_to_dictionary()
-
-  data['past_shows'] = past_shows
-  data['past_shows_count'] = len(past_shows)
-
-  data['upcoming_shows'] = upcoming_shows
-  data['upcoming_shows_count'] = len(upcoming_shows)
-
-  return render_template('pages/show_venue.html', venue=data)
+    return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -93,9 +103,16 @@ def create_venue_submission():
         form = {**request.form}
         form['genres'] = ','.join(request.form.getlist("genres"))
         venue = Venue(**form)
+        venue_form = VenueForm(request.form)
+
+        if not venue_form.validate_on_submit():
+            flash('An error occurred. ' + str(venue_form.errors)) 
+            return redirect(url_for('create_venue_form'))
+
         db.session.add(venue)
         db.session.commit()
         flash('Venue ' + request.form['name'] + ' was successfully listed!')
+        
     except:
         db.session.rollback()
         flash('An error occurred. Venue ' +
@@ -222,6 +239,12 @@ def edit_artist_submission(artist_id):
         form = {**request.form}
         form['genres'] = ','.join(request.form.getlist("genres"))
         artist = Artist.query.get(artist_id)
+        artist_form = ArtistForm(request.form)
+
+        if not artist_form.validate_on_submit():
+            flash('An error occurred. ' + str(artist_form.errors)) 
+            return redirect(url_for('edit_artist', artist_id=artist_id))
+
         for key, value in form.items():
             setattr(artist, key, value)
 
@@ -230,8 +253,7 @@ def edit_artist_submission(artist_id):
 
     except:
         db.session.rollback()
-        flash('An error occurred. Artist ' +
-              request.form['name'] + ' could not be updated.')
+        flash('An error occurred. Artist ' + request.form['name'] + ' could not be updated.')
         abort(400)
 
     finally:
@@ -256,6 +278,12 @@ def edit_venue_submission(venue_id):
         form = {**request.form}
         form['genres'] = ','.join(request.form.getlist("genres"))
         venue = Venue.query.get(venue_id)
+        venue_form = VenueForm(request.form)
+
+        if not venue_form.validate_on_submit():
+            flash('An error occurred. ' + str(venue_form.errors)) 
+            return redirect(url_for('edit_venue', venue_id=venue_id))
+
         for key, value in form.items():
             setattr(venue, key, value)
 
@@ -289,6 +317,12 @@ def create_artist_submission():
         form = {**request.form}
         form['genres'] = ','.join(request.form.getlist("genres"))
         artist = Artist(**form)
+        artist_form = ArtistForm(request.form)
+
+        if not artist_form.validate_on_submit():
+            flash('An error occurred. ' + str(artist_form.errors)) 
+            return redirect(url_for('create_artist_form'))
+
         db.session.add(artist)
         db.session.commit()
         flash('Artist ' + request.form['name'] + ' was successfully listed!')
